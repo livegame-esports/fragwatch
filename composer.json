@@ -1,0 +1,35 @@
+{
+    "name": "livegame/fragwatch",
+    "description": "Real-time CS 1.6 server monitoring bot for Telegram.",    
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "xpaw/php-source-query-class": "^4.0",
+        "longman/telegram-bot": "^0.83.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/",
+            "Config\\": "./"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@composer dump-autoload"
+        ],
+        "post-update-cmd": [
+            "@composer dump-autoload"
+        ]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

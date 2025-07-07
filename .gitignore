@@ -1,0 +1,10 @@
+.idea/
+**/.DS_Store
+
+/vendor/
+storage/*.key
+
+.env
+.env.backup
+
+.phpunit.result.cache
