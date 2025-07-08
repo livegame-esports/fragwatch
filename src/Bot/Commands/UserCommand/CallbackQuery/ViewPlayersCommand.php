@@ -2,6 +2,7 @@
 
 namespace App\Bot\Commands\UserCommand\CallbackQuery;
 
+use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Commands\Command;
 use Longman\TelegramBot\Entities\ServerResponse;
@@ -29,15 +30,16 @@ class ViewPlayersCommand extends Command
      *
      * @return ServerResponse
      * @throws TelegramException
+     * @throws TelegramException
      */
     public function preExecute(): ServerResponse
     {
         $this->inline_keyboard = new InlineKeyboard(
             [
-                ['text' => '🔄 Yangilash', 'callback_data' => 'view_players'],
+                ['text' => __('update'), 'callback_data' => 'view_players'],
             ],
             [
-                ['text' => '🔙 Orqaga', 'callback_data' => 'view_server_info'],
+                ['text' => __('back'), 'callback_data' => 'view_server_info'],
             ]
         );
 

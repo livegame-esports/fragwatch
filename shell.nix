@@ -4,8 +4,8 @@ in
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    php84
-    php84Packages.composer
+    php81
+    php81Packages.composer
   ];
 
   shellHook = ''

@@ -2,6 +2,9 @@
 
 namespace App\Bot\Commands\UserCommand\CallbackQuery;
 
+use App\SourceQuery\ServerInfo;
+use App\SourceQuery\SourceQuery;
+use Longman\TelegramBot\Exception\TelegramException;
 use Longman\TelegramBot\Request;
 use Longman\TelegramBot\Commands\Command;
 use Longman\TelegramBot\Entities\ServerResponse;
@@ -25,6 +28,11 @@ class ViewServerInfoCommand extends Command
     protected InlineKeyboard $inline_keyboard;
 
     /**
+     * @var ServerInfo
+     */
+    protected ServerInfo $server_info;
+
+    /**
      * Pre-execute command
      *
      * @return ServerResponse
@@ -37,6 +45,10 @@ class ViewServerInfoCommand extends Command
                 ['text' => '🎮 O‘yinchilarni ko‘rish', 'callback_data' => 'view_players'],
             ]
         );
+
+        $query = SourceQuery::Connect();
+        $this->server_info = new ServerInfo($query->GetInfo());
+        $query->Disconnect();
 
         return parent::preExecute();
     }
@@ -54,11 +66,7 @@ class ViewServerInfoCommand extends Command
         $chat_id = $callback_query->getMessage()->getChat()->getId();
         $message_id = $callback_query->getMessage()->getMessageId();
 
-        $query = \App\SourceQuery\SourceQuery::connect();
-        $server_info = $query->GetInfo();
-        $query->Disconnect();
-
-        $output = fmtServerInfo($server_info);
+        $output = fmtServerInfo($this->server_info);
 
         Request::editMessageCaption([
             'chat_id' => $chat_id,

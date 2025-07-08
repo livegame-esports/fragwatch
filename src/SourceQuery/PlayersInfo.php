@@ -2,7 +2,7 @@
 
 namespace App\SourceQuery;
 
-class ServerInfo extends \App\SourceQuery\PlayersInfo
+class PlayersInfo
 {
     public string $hostname;
     public string $description;
@@ -12,7 +12,7 @@ class ServerInfo extends \App\SourceQuery\PlayersInfo
     public int $max_players = 32;
 
     /**
-     * 
+     *
      * @param array $server_info
      * @return PlayersInfo
      */
@@ -29,7 +29,7 @@ class ServerInfo extends \App\SourceQuery\PlayersInfo
     }
 
     /**
-     * 
+     *
      * @return array
      */
     public function toArray(): array

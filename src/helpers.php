@@ -1,85 +1,83 @@
 <?php
 
+use App\SourceQuery\PlayersInfo;
+
 /**
- * Check if an image is available at the given URL.
- * 
- * @param string $url The URL of the image.
- * @return bool True if the image is available, false otherwise.
+ * Check if an image is available at the given URL by sending a HEAD request.
+ *
+ * @param string $url The URL of the image to check.
+ * @return bool True if the image exists and is accessible (HTTP 200), false otherwise.
  */
 function isImageAvailable(string $url): bool
 {
     $headers = @get_headers($url);
-    if ($headers && strpos($headers[0], '200') !== false) {
-        return true;
-    }
-    return false;
+    return $headers && str_contains($headers[0], '200');
 }
 
 /**
- * Get the image URL for a given map.
- * If the image is not available, return a fallback image URL.
- * 
- * @param string $map The name of the map.
- * @return string The URL of the image.
+ * Resolve the image URL for a given map name.
+ * Falls back to a default image if the map image is not found.
+ *
+ * @param string $map The map name (e.g., "de_dust2").
+ * @return string The final resolved image URL.
  */
 function getImageUrl(string $map): string
 {
-    $imageUrl = "https://raw.githubusercontent.com/livegame-esports/cms/refs/heads/master/files/maps_imgs/$map.jpg"; // Replace with an actual image URL
+    $imageUrl = config('maps.host') . "$map.jpg";
 
     if (!isImageAvailable($imageUrl)) {
-        $imageUrl = "https://raw.githubusercontent.com/livegame-esports/cms/refs/heads/master/files/miniatures/main.jpg"; // Fallback image URL
+        return config('maps.fallback');
     }
 
     return $imageUrl;
 }
 
 /**
- * Generate a formatted message with server information.
+ * Generate a formatted Telegram message for server information.
  *
- * @param array $server_info An associative array containing server information.
- *              Expected keys: 'HostName', 'ModDesc', 'Map', 'Players', 'MaxPlayers'.
- * @return string The formatted message.
+ * @param PlayersInfo $server_info Object containing hostname, description, map, and player count.
+ * @return string A formatted HTML message string for Telegram.
  */
-function fmtServerInfo(array $server_info): string
+function fmtServerInfo(PlayersInfo $server_info): string
 {
-    $hostname = htmlspecialchars($server_info['HostName']) ?? 'Unknown';
-    $description = htmlspecialchars($server_info['ModDesc']) ?? 'Unknown';
+    $ip = config('server.ip');
+    $port = config('server.port');
 
-    $map = $server_info['Map'] ?? 'Unknown';
-    $players = $server_info['Players'] ?? 0;
-    $maxPlayers = $server_info['MaxPlayers'] ?? 0;
+    $output = "<b>$server_info->hostname</b>\n";
+    $output .= "<i>$server_info->description</i>\n\n";
 
-    $output = <<<SERVER_INFO
-        <b>$hostname</b>
-        <i>$description</i>
+    $output .= __('ip') . ": $ip:$port\n";
+    $output .= __('map') . ": $server_info->map\n";
+    $output .= __('players') . ": $server_info->players_count/$server_info->max_players\n";
 
-        Map: $map
-        Players: $players/$maxPlayers
-    SERVER_INFO;
-
-    return preg_replace('/^[ \t]+/m', '', $output);
+    return $output;
 }
 
 /**
- * Format a list of players into a string.
+ * Render a formatted list of players currently in the server.
  *
- * @param array $players An array of players, where each player is an associative array with 'Name' and 'Id'.
- * @return string The formatted player list.
+ * @param array<int, array{
+ *     Id: int,
+ *     Name: string,
+ *     Frags: int,
+ *     Time: int,
+ *     TimeF: string
+ * }> $players The player data list.
+ *
+ * @return string A formatted HTML string ready to be sent via Telegram.
  */
 function fmtPlayerList(array $players): string
 {
     if (empty($players)) {
-        return "Serverda o'yinchilar yo'q.";
+        return __('no_players');
     }
 
-    // Sort players by 'Frags' in descending order
     usort($players, fn($a, $b) => $b['Frags'] <=> $a['Frags']);
 
     $medals = ['🥇', '🥈', '🥉'];
-    $result = "🎮 <b>Hozirgi o'yinchilar (" . count($players) . ")</b>\n\n";
+    $result = sprintf(__('current_players'), count($players)) . "\n\n";
 
     foreach ($players as $index => $player) {
-        // Assign a medal based on the index
         $icon = $medals[$index] ?? "👤";
 
         $name = htmlspecialchars($player['Name']);
@@ -87,8 +85,82 @@ function fmtPlayerList(array $players): string
         $time = $player['TimeF'];
 
         $result .= "$icon <b>$name</b>\n";
-        $result .= "Kills: <code>$frags</code>  |  ⏱ <code>$time</code>\n\n";
+        $result .= sprintf("%s: <code>%d</code>  |  %s: <code>%s</code>\n\n",
+            __('kills'), $frags, __('time'), $time
+        );
     }
 
     return trim($result);
+}
+
+/**
+ * @param string $key
+ * @param string|null $locale
+ * @return string
+ */
+function __(string $key, ?string $locale = null): string
+{
+    static $translations = [];
+
+    $locale = $locale ?? config('app.locale', 'ru');
+
+    if (!isset($translations[$locale])) {
+        $langFile = ROOT_DIR . "/lang/{$locale}.php";
+        if (!file_exists($langFile)) return $key;
+
+        $translations[$locale] = require $langFile;
+    }
+
+    return $translations[$locale][$key] ?? $key;
+}
+
+
+/**
+ * Retrieve a configuration value using dot notation.
+ *
+ * @param string $key The configuration key (e.g., "telegram.bot_token").
+ * @param mixed|null $default A fallback value if the key does not exist.
+ * @return mixed The config value or default if not found.
+ */
+function config(string $key, mixed $default = null): mixed
+{
+    $config = require ROOT_DIR . '/config.php';
+
+    foreach (explode('.', $key) as $segment) {
+        if (!is_array($config) && !array_key_exists($segment, $config)) {
+            return $default;
+        }
+        $config = $config[$segment];
+    }
+
+    return $config;
+}
+
+/**
+ * Load an environment variable from the .env file (if present).
+ *
+ * @param string $key The environment variable name.
+ * @param mixed|null $default The fallback value if not set.
+ * @return mixed The environment value or default if not found.
+ */
+function env(string $key, mixed $default = null): mixed
+{
+    static $loaded = false;
+
+    if (!$loaded && file_exists(ROOT_DIR . '/.env')) {
+        $lines = file(ROOT_DIR . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        foreach ($lines as $line) {
+            if (str_starts_with(trim($line), '#')) continue;
+
+            [$envKey, $value] = array_map('trim', explode('=', $line, 2));
+            $value = trim($value, "\"'");
+
+            $_ENV[$envKey] = $value;
+        }
+
+        $loaded = true;
+    }
+
+    return $_ENV[$key] ?? $default;
 }

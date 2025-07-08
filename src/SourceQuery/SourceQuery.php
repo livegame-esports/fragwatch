@@ -2,7 +2,6 @@
 
 namespace App\SourceQuery;
 
-use Config\Config;
 use xPaw\SourceQuery\SourceQuery as BaseSourceQuery;
 use xPaw\SourceQuery\Exception\{
     SourceQueryException,
@@ -19,7 +18,7 @@ class SourceQuery
         $sourceQuery = new BaseSourceQuery();
 
         try {
-            $sourceQuery->Connect(Config::SERVER_IP, Config::SERVER_PORT, Config::SERVER_TIMEOUT, Config::SERVER_ENGINE);
+            $sourceQuery->Connect(config('server.ip'), config('server.port'), config('server.timeout'), config('server.engine'));
         } catch (SourceQueryException | InvalidArgumentException | AuthenticationException | InvalidPacketException | SocketException $e) {
             throw new \RuntimeException("Failed to connect to server: " . $e->getMessage(), $e->getCode() ?: -1);
         }

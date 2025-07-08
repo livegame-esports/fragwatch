@@ -2,23 +2,28 @@
 
 namespace App\Bot;
 
-use Config\Config;
 use Longman\TelegramBot\Telegram;
 
+$BOT_TOKEN = config('telegram.bot_token');
+$BOT_USERNAME = config('telegram.username');
+
 try {
-    $telegram = new Telegram(Config::TELEGRAM_BOT_TOKEN, Config::TELEGRAM_USERNAME);
-    // $telegram->setWebhook(Config::TELEGRAM_WEBHOOK_URL);
+    $telegram = new Telegram($BOT_TOKEN, $BOT_USERNAME);
 
     $telegram->enableAdmins([]);
-    $telegram->addCommandsPath(Config::TELEGRAM_COMMANDS_PATH);
+    $telegram->addCommandsPath(config('telegram.commands_path'));
 
-    $telegram->useGetUpdatesWithoutDatabase();
+    if (config('app.environment') !== 'PRODUCTION') {
+        echo "Telegram Bot initialized with token: " . $BOT_TOKEN . "\n";
 
-    echo "Telegram Bot initialized with token: " . Config::TELEGRAM_BOT_TOKEN . "\n";
-    while (true) { 
-        $telegram->handleGetUpdates(); 
-        sleep(1); // Prevents high CPU usage in the loop
+        $telegram->useGetUpdatesWithoutDatabase();
+        while (true) {
+            $telegram->handleGetUpdates();
+            sleep(1); // Prevents high CPU usage in the loop
+        }
     }
+
+    $telegram->handle();
 } catch (\Longman\TelegramBot\Exception\TelegramException $e) {
     throw new \RuntimeException('Telegram Bot Error: ' . $e->getMessage(), $e->getCode() ?: -1);
 }
